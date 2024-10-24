@@ -13,8 +13,7 @@ use dao_voting::threshold::{PercentageThreshold, Threshold};
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{MSigBuilder, MSIG, PENDING_MSIG};
-use crate::{CW4_CODE_ID, MAIN_CODE_ID, PRE_PROPOSE_CODE_ID, PROPOSAL_CODE_ID, VOTING_CODE_ID};
+use crate::state::{MSigBuilder, MSIG, MSIG_CODE_IDS, PENDING_MSIG};
 /*
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:msig-launcher";
@@ -23,11 +22,12 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    _deps: DepsMut,
+    deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    _msg: InstantiateMsg,
+    msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
+    MSIG_CODE_IDS.save(deps.storage, &msg.code_ids)?;
     Ok(Response::default())
 }
 
@@ -47,6 +47,8 @@ pub fn execute(
             max_voting_period,
             members,
         } => {
+            let code_ids = MSIG_CODE_IDS.load(deps.storage)?;
+
             let msg = dao_interface::msg::InstantiateMsg {
                 admin: None,
                 name,
@@ -55,9 +57,9 @@ pub fn execute(
                 automatically_add_cw20s: false,
                 automatically_add_cw721s: false,
                 voting_module_instantiate_info: ModuleInstantiateInfo {
-                    code_id: VOTING_CODE_ID,
+                    code_id: code_ids.voting,
                     msg: to_json_binary(&cw4_voting::msg::InstantiateMsg {
-                        cw4_group_code_id: CW4_CODE_ID,
+                        cw4_group_code_id: code_ids.cw4,
                         initial_members: members,
                     })?,
                     admin: Some(CoreModule {}),
@@ -65,7 +67,7 @@ pub fn execute(
                     label: format!("{}-voting-module", label),
                 },
                 proposal_modules_instantiate_info: vec![ModuleInstantiateInfo {
-                    code_id: PROPOSAL_CODE_ID,
+                    code_id: code_ids.proposal,
                     msg: to_json_binary(&dao_proposal_single::msg::InstantiateMsg {
                         threshold: Threshold::ThresholdQuorum {
                             threshold: PercentageThreshold::Majority {},
@@ -77,7 +79,7 @@ pub fn execute(
                         allow_revoting: false,
                         pre_propose_info: PreProposeInfo::ModuleMayPropose {
                             info: ModuleInstantiateInfo {
-                                code_id: PRE_PROPOSE_CODE_ID,
+                                code_id: code_ids.pre_proposal,
                                 msg: to_json_binary(&dao_pre_propose_base::msg::InstantiateMsg {
                                     deposit_info: None,
                                     open_proposal_submission: false,
@@ -109,7 +111,7 @@ pub fn execute(
                 id: 0,
                 msg: WasmMsg::Instantiate {
                     admin: None,
-                    code_id: MAIN_CODE_ID,
+                    code_id: code_ids.main,
                     msg: to_json_binary(&msg)?,
                     funds: vec![],
                     label,
@@ -126,12 +128,14 @@ pub fn execute(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::MSig { label } => to_json_binary(&MSIG.load(deps.storage, label)?),
+        QueryMsg::CodeIds {} => to_json_binary(&MSIG_CODE_IDS.load(deps.storage)?),
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     let mut resp = Response::default();
+    let code_ids = MSIG_CODE_IDS.load(deps.storage)?;
     let (label, sender) = PENDING_MSIG.load(deps.storage)?;
     PENDING_MSIG.remove(deps.storage);
 
@@ -155,7 +159,11 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
 
                     // If both are found, match them into their appropriate address
                     if let Some((address, code_id)) = address.zip(code_id) {
-                        builder.set_contract(code_id.parse::<u64>().unwrap(), address)?;
+                        builder.set_contract(
+                            &code_ids,
+                            code_id.parse::<u64>().unwrap(),
+                            address,
+                        )?;
                     }
                 }
             }
@@ -176,7 +184,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
 #[cfg(test)]
 mod tests {
     use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-    use crate::state::MSig;
+    use crate::state::{MSig, MSigCodeIds};
     use cosmwasm_std::Addr;
     use cw4::Member;
     use cw_multi_test::{App, ContractWrapper, Executor};
@@ -239,7 +247,15 @@ mod tests {
             .instantiate_contract(
                 launcher_code_id,
                 Addr::unchecked("admin"),
-                &InstantiateMsg {},
+                &InstantiateMsg {
+                    code_ids: MSigCodeIds {
+                        main: 1,
+                        voting: 2,
+                        proposal: 3,
+                        pre_proposal: 4,
+                        cw4: 5,
+                    },
+                },
                 &[],
                 "label",
                 None,

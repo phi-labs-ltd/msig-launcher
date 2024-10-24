@@ -1,9 +1,18 @@
 use crate::ContractError;
-use crate::{CW4_CODE_ID, MAIN_CODE_ID, PRE_PROPOSE_CODE_ID, PROPOSAL_CODE_ID, VOTING_CODE_ID};
 use cosmwasm_std::{Addr, Attribute};
 use cw_storage_plus::{Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, PartialOrd, Eq, Clone, Debug, PartialEq, JsonSchema)]
+
+pub struct MSigCodeIds {
+    pub main: u64,
+    pub voting: u64,
+    pub proposal: u64,
+    pub pre_proposal: u64,
+    pub cw4: u64,
+}
 
 /// Easy helper for building the multisig wallet data
 pub struct MSigBuilder {
@@ -27,15 +36,25 @@ impl MSigBuilder {
         }
     }
 
-    pub fn set_contract(&mut self, code_id: u64, address: String) -> Result<(), ContractError> {
-        match code_id {
-            MAIN_CODE_ID => self.dao_dao_contract = Some(address),
-            VOTING_CODE_ID => self.voting_contract = Some(address),
-            PROPOSAL_CODE_ID => self.proposal_contract = Some(address),
-            PRE_PROPOSE_CODE_ID => self.pre_propose_contract = Some(address),
-            CW4_CODE_ID => self.cw4_contract = Some(address),
-            _ => return Err(ContractError::UnknownContract { code_id, address }),
-        };
+    pub fn set_contract(
+        &mut self,
+        code_ids: &MSigCodeIds,
+        code_id: u64,
+        address: String,
+    ) -> Result<(), ContractError> {
+        if code_id == code_ids.main {
+            self.dao_dao_contract = Some(address);
+        } else if code_id == code_ids.voting {
+            self.voting_contract = Some(address);
+        } else if code_id == code_ids.proposal {
+            self.proposal_contract = Some(address);
+        } else if code_id == code_ids.pre_proposal {
+            self.pre_propose_contract = Some(address);
+        } else if code_id == code_ids.cw4 {
+            self.cw4_contract = Some(address);
+        } else {
+            return Err(ContractError::UnknownContract { code_id, address });
+        }
 
         Ok(())
     }
@@ -84,5 +103,6 @@ impl MSig {
     }
 }
 
+pub static MSIG_CODE_IDS: Item<MSigCodeIds> = Item::new("msig_code_ids");
 pub static PENDING_MSIG: Item<(String, Addr)> = Item::new("pending_msig");
 pub static MSIG: Map<String, MSig> = Map::new("msig");

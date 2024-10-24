@@ -5,6 +5,19 @@
     {
       "type": "object",
       "required": [
+        "code_ids"
+      ],
+      "properties": {
+        "code_ids": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
         "m_sig"
       ],
       "properties": {

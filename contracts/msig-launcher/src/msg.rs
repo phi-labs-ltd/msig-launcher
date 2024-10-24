@@ -1,8 +1,10 @@
-use crate::state::MSig;
+use crate::state::{MSig, MSigCodeIds};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 
 #[cw_serde]
-pub struct InstantiateMsg {}
+pub struct InstantiateMsg {
+    pub code_ids: MSigCodeIds,
+}
 
 #[cw_serde]
 pub enum ExecuteMsg {
@@ -20,6 +22,8 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
+    #[returns(MSigCodeIds)]
+    CodeIds {},
     #[returns(MSig)]
     MSig { label: String },
 }

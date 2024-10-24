@@ -26,16 +26,11 @@ panic = 'abort'
 rpath = false
 
 [features]
-default = ["mainnet"]
+default = []
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
-# Determines which chain code ids are relevant
-testing = []
-mainnet = []
-testnet = []
-devnet = []
 
 [package.metadata.scripts]
 optimize = """docker run --rm \
