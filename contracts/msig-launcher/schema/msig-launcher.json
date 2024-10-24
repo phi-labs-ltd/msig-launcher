@@ -1,0 +1,161 @@
+{
+  "contract_name": "msig-launcher",
+  "contract_version": "0.1.0",
+  "idl_version": "1.0.0",
+  "instantiate": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "InstantiateMsg",
+    "type": "object",
+    "additionalProperties": false
+  },
+  "execute": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "ExecuteMsg",
+    "oneOf": [
+      {
+        "type": "object",
+        "required": [
+          "instantiate"
+        ],
+        "properties": {
+          "instantiate": {
+            "type": "object",
+            "required": [
+              "description",
+              "label",
+              "max_voting_period",
+              "members",
+              "name"
+            ],
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "image_url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "label": {
+                "type": "string"
+              },
+              "max_voting_period": {
+                "description": "Time in seconds",
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "members": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/Member"
+                }
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ],
+    "definitions": {
+      "Member": {
+        "description": "A group member has a weight associated with them. This may all be equal, or may have meaning in the app that makes use of the group (eg. voting power)",
+        "type": "object",
+        "required": [
+          "addr",
+          "weight"
+        ],
+        "properties": {
+          "addr": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        }
+      }
+    }
+  },
+  "query": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "QueryMsg",
+    "oneOf": [
+      {
+        "type": "object",
+        "required": [
+          "m_sig"
+        ],
+        "properties": {
+          "m_sig": {
+            "type": "object",
+            "required": [
+              "label"
+            ],
+            "properties": {
+              "label": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ]
+  },
+  "migrate": null,
+  "sudo": null,
+  "responses": {
+    "m_sig": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "MSig",
+      "type": "object",
+      "required": [
+        "creator",
+        "cw4_contract",
+        "dao_dao_contract",
+        "pre_propose_contract",
+        "proposal_contract",
+        "voting_contract"
+      ],
+      "properties": {
+        "creator": {
+          "description": "Multisig creator",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Addr"
+            }
+          ]
+        },
+        "cw4_contract": {
+          "type": "string"
+        },
+        "dao_dao_contract": {
+          "type": "string"
+        },
+        "pre_propose_contract": {
+          "type": "string"
+        },
+        "proposal_contract": {
+          "type": "string"
+        },
+        "voting_contract": {
+          "type": "string"
+        }
+      },
+      "definitions": {
+        "Addr": {
+          "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+          "type": "string"
+        }
+      }
+    }
+  }
+}
