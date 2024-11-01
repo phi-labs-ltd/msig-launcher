@@ -1,19 +1,13 @@
+use archway_proto::prost::{Message, Name};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdResult,
-    SubMsg, SubMsgResult, WasmMsg,
-};
-use cw_utils::Duration;
-use dao_interface::state::Admin::CoreModule;
-use dao_interface::state::ModuleInstantiateInfo;
-use dao_voting::pre_propose::PreProposeInfo;
-use dao_voting::threshold::{PercentageThreshold, Threshold};
+use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 // use cw2::set_contract_version;
 
 use crate::error::ContractError;
+use crate::execute::execute_instantiate;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{MSigBuilder, MSIG, MSIG_CODE_IDS, PENDING_MSIG};
+use crate::state::{MSIG, MSIG_CODE_IDS};
 /*
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:msig-launcher";
@@ -34,7 +28,7 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
@@ -46,78 +40,17 @@ pub fn execute(
             image_url,
             max_voting_period,
             members,
-        } => {
-            let code_ids = MSIG_CODE_IDS.load(deps.storage)?;
-
-            let msg = dao_interface::msg::InstantiateMsg {
-                admin: None,
-                name,
-                description,
-                image_url,
-                automatically_add_cw20s: false,
-                automatically_add_cw721s: false,
-                voting_module_instantiate_info: ModuleInstantiateInfo {
-                    code_id: code_ids.voting,
-                    msg: to_json_binary(&cw4_voting::msg::InstantiateMsg {
-                        cw4_group_code_id: code_ids.cw4,
-                        initial_members: members,
-                    })?,
-                    admin: Some(CoreModule {}),
-                    funds: vec![],
-                    label: format!("{}-voting-module", label),
-                },
-                proposal_modules_instantiate_info: vec![ModuleInstantiateInfo {
-                    code_id: code_ids.proposal,
-                    msg: to_json_binary(&dao_proposal_single::msg::InstantiateMsg {
-                        threshold: Threshold::ThresholdQuorum {
-                            threshold: PercentageThreshold::Majority {},
-                            quorum: PercentageThreshold::Majority {},
-                        },
-                        max_voting_period: Duration::Time(max_voting_period),
-                        min_voting_period: None,
-                        only_members_execute: true,
-                        allow_revoting: false,
-                        pre_propose_info: PreProposeInfo::ModuleMayPropose {
-                            info: ModuleInstantiateInfo {
-                                code_id: code_ids.pre_proposal,
-                                msg: to_json_binary(&dao_pre_propose_base::msg::InstantiateMsg {
-                                    deposit_info: None,
-                                    open_proposal_submission: false,
-                                    extension: Empty {},
-                                })?,
-                                admin: Some(CoreModule {}),
-                                funds: vec![],
-                                label: format!("{}-pre-proposal-module", label),
-                            },
-                        },
-                        close_proposal_on_execution_failure: false,
-                        veto: None,
-                    })?,
-                    admin: Some(CoreModule {}),
-                    funds: vec![],
-                    label: format!("{}-proposal-module", label),
-                }],
-                initial_items: None,
-                dao_uri: None,
-            };
-
-            if PENDING_MSIG.exists(deps.storage) {
-                return Err(ContractError::UnexpectedDoubleTx {});
-            }
-
-            PENDING_MSIG.save(deps.storage, &(label.clone(), info.sender))?;
-
-            Ok(Response::default().add_submessage(SubMsg::reply_on_success(
-                WasmMsg::Instantiate {
-                    admin: None,
-                    code_id: code_ids.main,
-                    msg: to_json_binary(&msg)?,
-                    funds: vec![],
-                    label,
-                },
-                0,
-            )))
-        }
+        } => execute_instantiate(
+            deps,
+            env,
+            info,
+            label,
+            name,
+            description,
+            image_url,
+            max_voting_period,
+            members,
+        ),
     }
 }
 
@@ -129,121 +62,48 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     }
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
-    let mut resp = Response::default();
-    let code_ids = MSIG_CODE_IDS.load(deps.storage)?;
-    let (label, sender) = PENDING_MSIG.load(deps.storage)?;
-    PENDING_MSIG.remove(deps.storage);
-
-    let mut builder = MSigBuilder::new(sender);
-
-    match msg.result {
-        SubMsgResult::Ok(result) => {
-            for event in result.events {
-                // Look for instantiate type
-                if event.ty == "instantiate" {
-                    // Look for both addr and code id
-                    let mut address = None;
-                    let mut code_id = None;
-                    for attr in event.attributes {
-                        if attr.key == "_contract_address" {
-                            address = Some(attr.value);
-                        } else if attr.key == "code_id" {
-                            code_id = Some(attr.value);
-                        }
-                    }
-
-                    // If both are found, match them into their appropriate address
-                    if let Some((address, code_id)) = address.zip(code_id) {
-                        builder.set_contract(
-                            &code_ids,
-                            code_id.parse::<u64>().unwrap(),
-                            address,
-                        )?;
-                    }
-                }
-            }
-            Ok(())
-        }
-        SubMsgResult::Err(err) => Err(ContractError::ReplyError(err)),
-    }?;
-
-    let msig = builder.build()?;
-
-    msig.append_attrs(&mut resp.attributes);
-
-    MSIG.save(deps.storage, label, &msig)?;
-
-    Ok(resp)
-}
-
 #[cfg(test)]
 mod tests {
     use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
     use crate::state::{MSig, MSigCodeIds};
-    use cosmwasm_std::Addr;
+    use archway_test_tube::module::{Module, Wasm};
+    use archway_test_tube::test_tube::Account;
+    use archway_test_tube::{arch, ArchwayApp};
     use cw4::Member;
-    use cw_multi_test::{App, ContractWrapper, Executor};
+    use cw_multi_test::Executor;
 
     #[test]
     fn instantiate() {
-        let mut app = App::default();
-        // Store all Dao contracts
-        // Base
-        app.store_code(Box::new(
-            ContractWrapper::new(
-                dao_dao_core::contract::execute,
-                dao_dao_core::contract::instantiate,
-                dao_dao_core::contract::query,
-            )
-            .with_reply(dao_dao_core::contract::reply),
-        ));
-        // Voting
-        app.store_code(Box::new(
-            ContractWrapper::new(
-                cw4_voting::contract::execute,
-                cw4_voting::contract::instantiate,
-                cw4_voting::contract::query,
-            )
-            .with_reply(cw4_voting::contract::reply),
-        ));
-        // Proposal
-        app.store_code(Box::new(
-            ContractWrapper::new(
-                dao_proposal_single::contract::execute,
-                dao_proposal_single::contract::instantiate,
-                dao_proposal_single::contract::query,
-            )
-            .with_reply(dao_proposal_single::contract::reply),
-        ));
-        // Pre Propose
-        app.store_code(Box::new(ContractWrapper::new(
-            dao_pre_propose_single::contract::execute,
-            dao_pre_propose_single::contract::instantiate,
-            dao_pre_propose_single::contract::query,
-        )));
-        // Cw4
-        app.store_code(Box::new(ContractWrapper::new(
-            cw4_group::contract::execute,
-            cw4_group::contract::instantiate,
-            cw4_group::contract::query,
-        )));
+        let mut app = ArchwayApp::default();
+
+        let accounts = app.init_accounts(&[arch(100)], 2).unwrap();
+        let admin = accounts.get(0).unwrap();
+        let user = accounts.get(1).unwrap();
+
+        let wasm = Wasm::new(&app);
+        let dao_core_file = std::fs::read("../../external_wasm/dao_dao_core.wasm").unwrap();
+        wasm.store_code(&dao_core_file, None, admin).unwrap();
+        let voting_file = std::fs::read("../../external_wasm/cw4_voting.wasm").unwrap();
+        wasm.store_code(&voting_file, None, admin).unwrap();
+        let proposal_file = std::fs::read("../../external_wasm/dao_proposal_single.wasm").unwrap();
+        wasm.store_code(&proposal_file, None, admin).unwrap();
+        let pre_propose_file =
+            std::fs::read("../../external_wasm/dao_pre_propose_single.wasm").unwrap();
+        wasm.store_code(&pre_propose_file, None, admin).unwrap();
+        let cw4 = std::fs::read("../../external_wasm/cw4_group.wasm").unwrap();
+        wasm.store_code(&cw4, None, admin).unwrap();
 
         // Msig launcher
-        let launcher_code_id = app.store_code(Box::new(
-            ContractWrapper::new(
-                crate::contract::execute,
-                crate::contract::instantiate,
-                crate::contract::query,
-            )
-            .with_reply(crate::contract::reply),
-        ));
+        let launcher = std::fs::read("../../artifacts/msig_launcher.wasm").unwrap();
+        let launcher_code_id = wasm
+            .store_code(&launcher, None, admin)
+            .unwrap()
+            .data
+            .code_id;
 
-        let launcher = app
-            .instantiate_contract(
+        let launcher = wasm
+            .instantiate(
                 launcher_code_id,
-                Addr::unchecked("admin"),
                 &InstantiateMsg {
                     code_ids: MSigCodeIds {
                         main: 1,
@@ -253,16 +113,19 @@ mod tests {
                         cw4: 5,
                     },
                 },
-                &[],
-                "label",
                 None,
+                Some("label".clone()),
+                &[],
+                admin,
             )
-            .unwrap();
+            .unwrap()
+            .data
+            .address;
 
-        let res = app
-            .execute_contract(
-                Addr::unchecked("user"),
-                launcher.clone(),
+        let member_accounts = app.init_accounts(&[arch(100)], 3).unwrap();
+        let res = wasm
+            .execute(
+                &launcher,
                 &ExecuteMsg::Instantiate {
                     label: "msig".to_string(),
                     name: "SomeWallet".to_string(),
@@ -271,59 +134,46 @@ mod tests {
                     max_voting_period: 100,
                     members: vec![
                         Member {
-                            addr: "addr1".to_string(),
+                            addr: member_accounts.get(0).unwrap().address(),
                             weight: 1,
                         },
                         Member {
-                            addr: "addr2".to_string(),
+                            addr: member_accounts.get(1).unwrap().address(),
                             weight: 1,
                         },
                         Member {
-                            addr: "addr3".to_string(),
+                            addr: member_accounts.get(2).unwrap().address(),
                             weight: 1,
                         },
                     ],
                 },
                 &[],
+                user,
             )
             .unwrap();
 
         // Get the last event which should be this contract's reply
         let relevant_event = res.events.last().unwrap();
+        let mut event_iter = relevant_event.attributes.iter();
+        // Skip the execution attr
+        event_iter.next();
 
-        assert_eq!(
-            relevant_event.attributes,
-            vec![
-                ("_contract_address", "contract0"),
-                ("creator", "user"),
-                ("dao_dao_address", "contract1"),
-                ("voting_address", "contract2"),
-                ("proposal_address", "contract4"),
-                ("pre_propose_address", "contract5"),
-                ("cw4_address", "contract3"),
-            ]
-        );
-
-        let res: MSig = app
-            .wrap()
-            .query_wasm_smart(
-                launcher.clone(),
+        // Queried
+        let res = wasm
+            .query::<_, MSig>(
+                &launcher,
                 &QueryMsg::MSig {
                     label: "msig".to_string(),
                 },
             )
             .unwrap();
 
-        assert_eq!(
-            res,
-            MSig {
-                creator: Addr::unchecked("user"),
-                dao_dao_contract: "contract1".to_string(),
-                voting_contract: "contract2".to_string(),
-                proposal_contract: "contract4".to_string(),
-                pre_propose_contract: "contract5".to_string(),
-                cw4_contract: "contract3".to_string(),
-            }
-        )
+        let mut queried_attrs = vec![];
+        res.append_attrs(&mut queried_attrs);
+
+        for (a, b) in queried_attrs.iter().zip(event_iter) {
+            assert_eq!(a.key, b.key);
+            assert_eq!(a.value, b.value);
+        }
     }
 }
