@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply, ReplyOn, Response,
-    StdResult, SubMsg, SubMsgResult, WasmMsg,
+    to_json_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdResult,
+    SubMsg, SubMsgResult, WasmMsg,
 };
 use cw_utils::Duration;
 use dao_interface::state::Admin::CoreModule;
@@ -107,19 +107,16 @@ pub fn execute(
 
             PENDING_MSIG.save(deps.storage, &(label.clone(), info.sender))?;
 
-            Ok(Response::default().add_submessage(SubMsg {
-                id: 0,
-                msg: WasmMsg::Instantiate {
+            Ok(Response::default().add_submessage(SubMsg::reply_on_success(
+                WasmMsg::Instantiate {
                     admin: None,
                     code_id: code_ids.main,
                     msg: to_json_binary(&msg)?,
                     funds: vec![],
                     label,
-                }
-                .into(),
-                gas_limit: None,
-                reply_on: ReplyOn::Success,
-            }))
+                },
+                0,
+            )))
         }
     }
 }
