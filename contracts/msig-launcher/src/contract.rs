@@ -134,7 +134,9 @@ mod tests {
         wasm.store_code(&cw4, None, admin).unwrap();
 
         // Msig launcher
-        let launcher = std::fs::read("../../artifacts/msig_launcher.wasm").unwrap();
+        let launcher =
+            std::fs::read("../../target/wasm32-unknown-unknown/release/msig_launcher.wasm")
+                .unwrap();
         let launcher_code_id = wasm
             .store_code(&launcher, None, admin)
             .unwrap()
