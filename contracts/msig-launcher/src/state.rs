@@ -4,7 +4,7 @@ use cw_storage_plus::{Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, PartialOrd, Eq, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, PartialOrd, Eq, Clone, Debug, PartialEq, JsonSchema, Default)]
 
 pub struct MSigCodeIds {
     pub main: u64,
@@ -15,6 +15,7 @@ pub struct MSigCodeIds {
 }
 
 /// Easy helper for building the multisig wallet data
+#[derive(Default)]
 pub struct MSigBuilder {
     pub dao_dao_contract: Option<String>,
     pub voting_contract: Option<String>,
@@ -24,16 +25,6 @@ pub struct MSigBuilder {
 }
 
 impl MSigBuilder {
-    pub fn new() -> Self {
-        Self {
-            dao_dao_contract: None,
-            voting_contract: None,
-            proposal_contract: None,
-            pre_propose_contract: None,
-            cw4_contract: None,
-        }
-    }
-
     pub fn set_contract(
         &mut self,
         code_ids: &MSigCodeIds,

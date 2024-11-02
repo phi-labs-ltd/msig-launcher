@@ -32,13 +32,14 @@ fn set_metadatas(resp: &mut Response, env: &Env, dao_core: String, target_contra
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
+#[allow(dead_code)]
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
     let mut resp = Response::default();
     let code_ids = MSIG_CODE_IDS.load(deps.storage)?;
     let (sender, block) = PENDING_MSIG.load(deps.storage)?;
     PENDING_MSIG.remove(deps.storage);
 
-    let mut builder = MSigBuilder::new();
+    let mut builder = MSigBuilder::default();
 
     match msg.result {
         SubMsgResult::Ok(result) => {

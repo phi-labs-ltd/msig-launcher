@@ -7,6 +7,7 @@ use dao_interface::state::ModuleInstantiateInfo;
 use dao_voting::pre_propose::PreProposeInfo;
 use dao_voting::threshold::{PercentageThreshold, Threshold};
 
+#[allow(clippy::too_many_arguments)]
 pub fn execute_instantiate(
     deps: DepsMut,
     env: Env,
