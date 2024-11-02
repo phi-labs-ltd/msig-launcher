@@ -11,13 +11,13 @@ pub fn execute_instantiate(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    label: String,
     name: String,
     description: String,
     image_url: Option<String>,
     max_voting_period: u64,
     members: Vec<cw4::Member>,
 ) -> Result<Response, ContractError> {
+    let label = format!("{}-{}", info.sender, env.block.height);
     let code_ids = MSIG_CODE_IDS.load(deps.storage)?;
 
     let msg = dao_interface::msg::InstantiateMsg {
@@ -82,17 +82,16 @@ pub fn execute_instantiate(
         return Err(ContractError::UnexpectedDoubleTx {});
     }
 
-    PENDING_MSIG.save(deps.storage, &(label.clone(), info.sender))?;
+    PENDING_MSIG.save(deps.storage, &(info.sender, env.block.height))?;
 
     // Temporarily set the contract's admin to be the smart contract to setup some information
     Ok(Response::default().add_submessage(SubMsg::reply_on_success(
-        WasmMsg::Instantiate2 {
+        WasmMsg::Instantiate {
             admin: Some(env.contract.address.to_string()),
             code_id: code_ids.main,
             msg: to_json_binary(&msg)?,
             funds: vec![],
             label,
-            salt: Default::default(),
         },
         0,
     )))

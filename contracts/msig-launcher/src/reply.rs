@@ -35,10 +35,10 @@ fn set_metadatas(resp: &mut Response, env: &Env, dao_core: String, target_contra
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
     let mut resp = Response::default();
     let code_ids = MSIG_CODE_IDS.load(deps.storage)?;
-    let (label, sender) = PENDING_MSIG.load(deps.storage)?;
+    let (sender, block) = PENDING_MSIG.load(deps.storage)?;
     PENDING_MSIG.remove(deps.storage);
 
-    let mut builder = MSigBuilder::new(sender);
+    let mut builder = MSigBuilder::new();
 
     match msg.result {
         SubMsgResult::Ok(result) => {
@@ -73,9 +73,9 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
 
     let msig = builder.build()?;
 
-    msig.append_attrs(&mut resp.attributes);
+    msig.append_attrs(&sender, &mut resp.attributes);
 
-    MSIG.save(deps.storage, label, &msig)?;
+    MSIG.save(deps.storage, (sender, block), &msig)?;
 
     // Set the contract metadata
     set_metadatas(

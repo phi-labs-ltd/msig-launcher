@@ -1,12 +1,17 @@
 use archway_proto::prost::{Message, Name};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult,
+};
+use cw_storage_plus::Bound;
 // use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::execute::execute_instantiate;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{
+    ExecuteMsg, InstantiateMsg, PageResult, QueryMsg, PAGINATION_DEFAULT, PAGINATION_LIMIT,
+};
 use crate::state::{MSIG, MSIG_CODE_IDS};
 /*
 // version info for migration info
@@ -34,7 +39,6 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Instantiate {
-            label,
             name,
             description,
             image_url,
@@ -44,7 +48,6 @@ pub fn execute(
             deps,
             env,
             info,
-            label,
             name,
             description,
             image_url,
@@ -57,20 +60,57 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::MSig { label } => to_json_binary(&MSIG.load(deps.storage, label)?),
+        QueryMsg::MSigs { pagination } => {
+            let limit = pagination
+                .limit
+                .unwrap_or(PAGINATION_DEFAULT)
+                .min(PAGINATION_LIMIT) as usize;
+
+            let mut results = vec![];
+            let mut page = None;
+
+            // We add a +1 for the next page to get
+            for (i, res) in MSIG
+                .range(
+                    deps.storage,
+                    Some(Bound::inclusive((
+                        pagination.user,
+                        pagination.start_at.unwrap_or(0),
+                    ))),
+                    None,
+                    Order::Ascending,
+                )
+                .take(limit + 1)
+                .enumerate()
+            {
+                let ((_, height), result) = res?;
+                results.push(result);
+
+                // If we got the expected amount of items + 1
+                // then theres more to query the next time
+                if i == limit {
+                    page = Some(height);
+                }
+            }
+
+            to_json_binary(&PageResult {
+                data: results,
+                next: page,
+            })
+        }
         QueryMsg::CodeIds {} => to_json_binary(&MSIG_CODE_IDS.load(deps.storage)?),
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-    use crate::state::{MSig, MSigCodeIds};
+    use crate::msg::{ExecuteMsg, InstantiateMsg, PageResult, Pagination, QueryMsg};
+    use crate::state::MSigCodeIds;
     use archway_test_tube::module::{Module, Wasm};
     use archway_test_tube::test_tube::Account;
     use archway_test_tube::{arch, ArchwayApp};
+    use cosmwasm_std::Addr;
     use cw4::Member;
-    use cw_multi_test::Executor;
 
     #[test]
     fn instantiate() {
@@ -127,7 +167,6 @@ mod tests {
             .execute(
                 &launcher,
                 &ExecuteMsg::Instantiate {
-                    label: "msig".to_string(),
                     name: "SomeWallet".to_string(),
                     description: "SomeDescription".to_string(),
                     image_url: Some("Image".to_string()),
@@ -152,28 +191,17 @@ mod tests {
             )
             .unwrap();
 
-        // Get the last event which should be this contract's reply
-        let relevant_event = res.events.last().unwrap();
-        let mut event_iter = relevant_event.attributes.iter();
-        // Skip the execution attr
-        event_iter.next();
-
         // Queried
-        let res = wasm
-            .query::<_, MSig>(
-                &launcher,
-                &QueryMsg::MSig {
-                    label: "msig".to_string(),
+        wasm.query::<_, PageResult>(
+            &launcher,
+            &QueryMsg::MSigs {
+                pagination: Pagination {
+                    user: Addr::unchecked(user.address()),
+                    limit: None,
+                    start_at: None,
                 },
-            )
-            .unwrap();
-
-        let mut queried_attrs = vec![];
-        res.append_attrs(&mut queried_attrs);
-
-        for (a, b) in queried_attrs.iter().zip(event_iter) {
-            assert_eq!(a.key, b.key);
-            assert_eq!(a.value, b.value);
-        }
+            },
+        )
+        .unwrap();
     }
 }

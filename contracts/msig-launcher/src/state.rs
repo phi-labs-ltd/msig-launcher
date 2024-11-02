@@ -16,7 +16,6 @@ pub struct MSigCodeIds {
 
 /// Easy helper for building the multisig wallet data
 pub struct MSigBuilder {
-    pub creator: Addr,
     pub dao_dao_contract: Option<String>,
     pub voting_contract: Option<String>,
     pub proposal_contract: Option<String>,
@@ -25,9 +24,8 @@ pub struct MSigBuilder {
 }
 
 impl MSigBuilder {
-    pub fn new(creator: Addr) -> Self {
+    pub fn new() -> Self {
         Self {
-            creator,
             dao_dao_contract: None,
             voting_contract: None,
             proposal_contract: None,
@@ -61,7 +59,6 @@ impl MSigBuilder {
 
     pub fn build(self) -> Result<MSig, ContractError> {
         Ok(MSig {
-            creator: self.creator,
             dao_dao_contract: self
                 .dao_dao_contract
                 .ok_or(ContractError::MissingContract("Dao Dao".to_string()))?,
@@ -84,7 +81,6 @@ impl MSigBuilder {
 #[derive(Serialize, Deserialize, PartialOrd, Eq, Clone, Debug, PartialEq, JsonSchema)]
 pub struct MSig {
     /// Multisig creator
-    pub creator: Addr,
     pub dao_dao_contract: String,
     pub voting_contract: String,
     pub proposal_contract: String,
@@ -93,8 +89,8 @@ pub struct MSig {
 }
 
 impl MSig {
-    pub fn append_attrs(&self, events: &mut Vec<Attribute>) {
-        events.push(("creator", self.creator.to_string()).into());
+    pub fn append_attrs(&self, creator: &Addr, events: &mut Vec<Attribute>) {
+        events.push(("creator", creator.to_string()).into());
         events.push(("dao_dao_address", self.dao_dao_contract.to_string()).into());
         events.push(("voting_address", self.voting_contract.to_string()).into());
         events.push(("proposal_address", self.proposal_contract.to_string()).into());
@@ -104,5 +100,5 @@ impl MSig {
 }
 
 pub static MSIG_CODE_IDS: Item<MSigCodeIds> = Item::new("msig_code_ids");
-pub static PENDING_MSIG: Item<(String, Addr)> = Item::new("pending_msig");
-pub static MSIG: Map<String, MSig> = Map::new("msig");
+pub static PENDING_MSIG: Item<(Addr, u64)> = Item::new("pending_msig");
+pub static MSIG: Map<(Addr, u64), MSig> = Map::new("msig");
