@@ -83,12 +83,13 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 .enumerate()
             {
                 let ((_, height), result) = res?;
-                results.push(result);
 
                 // If we got the expected amount of items + 1
                 // then theres more to query the next time
                 if i == limit {
                     page = Some(height);
+                } else {
+                    results.push(result);
                 }
             }
 
@@ -113,7 +114,7 @@ mod tests {
 
     #[test]
     fn instantiate() {
-        let mut app = ArchwayApp::default();
+        let app = ArchwayApp::default();
 
         let accounts = app.init_accounts(&[arch(100)], 2).unwrap();
         let admin = accounts.get(0).unwrap();
@@ -155,7 +156,7 @@ mod tests {
                     },
                 },
                 None,
-                Some("label".clone()),
+                Some("label"),
                 &[],
                 admin,
             )
@@ -164,7 +165,7 @@ mod tests {
             .address;
 
         let member_accounts = app.init_accounts(&[arch(100)], 3).unwrap();
-        let res = wasm
+        let _res = wasm
             .execute(
                 &launcher,
                 &ExecuteMsg::Instantiate {
