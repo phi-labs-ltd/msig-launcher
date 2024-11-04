@@ -13,14 +13,6 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v2
 
-      - name: Run unit tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: unit-test
-          args: --locked
-        env:
-          RUST_BACKTRACE: 1
-
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -33,9 +25,17 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: wasm
-          args: --locked
+          args: --locked --release
         env:
           RUSTFLAGS: "-C link-arg=-s"
+
+      - name: Run unit tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: unit-test
+          args: --locked
+        env:
+          RUST_BACKTRACE: 1
 
   lints:
     name: Lints
