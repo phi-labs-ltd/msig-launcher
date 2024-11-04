@@ -43,7 +43,6 @@ pub fn execute_instantiate(
             admin: Some(Address {
                 addr: env.contract.address.to_string(),
             }),
-            funds: vec![],
             label: format!("{}-voting-module", label),
         },
         proposal_modules_instantiate_info: vec![ModuleInstantiateInfo {
@@ -68,17 +67,14 @@ pub fn execute_instantiate(
                         admin: Some(Address {
                             addr: env.contract.address.to_string(),
                         }),
-                        funds: vec![],
                         label: format!("{}-pre-proposal-module", label),
                     },
                 },
                 close_proposal_on_execution_failure: true,
-                veto: None,
             })?,
             admin: Some(Address {
                 addr: env.contract.address.to_string(),
             }),
-            funds: vec![],
             label: format!("{}-proposal-module", label),
         }],
         initial_items: None,
