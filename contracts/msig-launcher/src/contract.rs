@@ -122,16 +122,32 @@ mod tests {
 
         let wasm = Wasm::new(&app);
         let dao_core_file = std::fs::read("../../external_wasm/dao_dao_core.wasm").unwrap();
-        wasm.store_code(&dao_core_file, None, admin).unwrap();
+        let dao_core_id = wasm
+            .store_code(&dao_core_file, None, admin)
+            .unwrap()
+            .data
+            .code_id;
         let voting_file = std::fs::read("../../external_wasm/cw4_voting.wasm").unwrap();
-        wasm.store_code(&voting_file, None, admin).unwrap();
+        let voting_id = wasm
+            .store_code(&voting_file, None, admin)
+            .unwrap()
+            .data
+            .code_id;
         let proposal_file = std::fs::read("../../external_wasm/dao_proposal_single.wasm").unwrap();
-        wasm.store_code(&proposal_file, None, admin).unwrap();
+        let proposal_id = wasm
+            .store_code(&proposal_file, None, admin)
+            .unwrap()
+            .data
+            .code_id;
         let pre_propose_file =
             std::fs::read("../../external_wasm/dao_pre_propose_single.wasm").unwrap();
-        wasm.store_code(&pre_propose_file, None, admin).unwrap();
+        let pre_propose_id = wasm
+            .store_code(&pre_propose_file, None, admin)
+            .unwrap()
+            .data
+            .code_id;
         let cw4 = std::fs::read("../../external_wasm/cw4_group.wasm").unwrap();
-        wasm.store_code(&cw4, None, admin).unwrap();
+        let cw4_id = wasm.store_code(&cw4, None, admin).unwrap().data.code_id;
 
         // Msig launcher
         let launcher =
@@ -148,11 +164,11 @@ mod tests {
                 launcher_code_id,
                 &InstantiateMsg {
                     code_ids: MSigCodeIds {
-                        main: 1,
-                        voting: 2,
-                        proposal: 3,
-                        pre_proposal: 4,
-                        cw4: 5,
+                        main: dao_core_id,
+                        voting: voting_id,
+                        proposal: proposal_id,
+                        pre_proposal: pre_propose_id,
+                        cw4: cw4_id,
                     },
                 },
                 None,
