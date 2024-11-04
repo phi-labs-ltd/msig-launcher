@@ -42,6 +42,7 @@ pub fn execute(
             description,
             image_url,
             max_voting_period,
+            min_voting_period,
             members,
         } => execute_instantiate(
             deps,
@@ -50,6 +51,7 @@ pub fn execute(
             name,
             description,
             image_url,
+            min_voting_period,
             max_voting_period,
             members,
         ),
@@ -189,6 +191,7 @@ mod tests {
                     description: "SomeDescription".to_string(),
                     image_url: Some("Image".to_string()),
                     max_voting_period: 100,
+                    min_voting_period: 0,
                     members: vec![
                         Member {
                             addr: member_accounts.get(0).unwrap().address(),
