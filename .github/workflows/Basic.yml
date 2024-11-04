@@ -1,6 +1,6 @@
 # Based on https://github.com/actions-rs/example/blob/master/.github/workflows/quickstart.yml
 
-on: [push, pull_request]
+on: [ push, pull_request ]
 
 name: Basic
 
@@ -13,14 +13,6 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v2
 
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: wasm32-unknown-unknown
-          override: true
-          profile: minimal
-
       - name: Run unit tests
         uses: actions-rs/cargo@v1
         with:
@@ -28,6 +20,14 @@ jobs:
           args: --locked
         env:
           RUST_BACKTRACE: 1
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          override: true
+          profile: minimal
 
       - name: Compile WASM contract
         uses: actions-rs/cargo@v1
