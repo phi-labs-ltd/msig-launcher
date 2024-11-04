@@ -210,16 +210,36 @@ mod tests {
             .unwrap();
 
         // Queried
-        wasm.query::<_, PageResult>(
-            &launcher,
-            &QueryMsg::MSigs {
-                pagination: Pagination {
-                    user: Addr::unchecked(user.address()),
-                    limit: None,
-                    start_at: None,
+        let res = wasm
+            .query::<_, PageResult>(
+                &launcher,
+                &QueryMsg::MSigs {
+                    pagination: Pagination {
+                        user: Addr::unchecked(user.address()),
+                        limit: None,
+                        start_at: None,
+                    },
                 },
-            },
-        )
-        .unwrap();
+            )
+            .unwrap();
+        let main = res.data.get(0).unwrap();
+
+        for addr in member_accounts {
+            let res = wasm
+                .query::<_, PageResult>(
+                    &launcher,
+                    &QueryMsg::MSigs {
+                        pagination: Pagination {
+                            user: Addr::unchecked(addr.address()),
+                            limit: None,
+                            start_at: None,
+                        },
+                    },
+                )
+                .unwrap();
+            let msig = res.data.get(0).unwrap();
+
+            assert_eq!(msig, main);
+        }
     }
 }

@@ -80,8 +80,13 @@ pub struct MSig {
 }
 
 impl MSig {
-    pub fn append_attrs(&self, creator: &Addr, events: &mut Vec<Attribute>) {
-        events.push(("creator", creator.to_string()).into());
+    pub fn append_attrs(&self, creator: &[Addr], events: &mut Vec<Attribute>) {
+        let mut iter = creator.iter();
+
+        events.push(("creator", iter.next().unwrap()).into());
+        for addr in iter {
+            events.push(("member", addr).into());
+        }
         events.push(("dao_dao_address", self.dao_dao_contract.to_string()).into());
         events.push(("voting_address", self.voting_contract.to_string()).into());
         events.push(("proposal_address", self.proposal_contract.to_string()).into());
@@ -91,5 +96,5 @@ impl MSig {
 }
 
 pub static MSIG_CODE_IDS: Item<MSigCodeIds> = Item::new("msig_code_ids");
-pub static PENDING_MSIG: Item<(Addr, u64)> = Item::new("pending_msig");
+pub static PENDING_MSIG: Item<(Vec<Addr>, u64)> = Item::new("pending_msig");
 pub static MSIG: Map<(Addr, u64), MSig> = Map::new("msig");

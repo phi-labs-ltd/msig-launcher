@@ -21,6 +21,11 @@ pub fn execute_instantiate(
     let label = format!("{}-{}", info.sender, env.block.height);
     let code_ids = MSIG_CODE_IDS.load(deps.storage)?;
 
+    let mut involved_addrs = vec![info.sender];
+    for member in members.iter() {
+        involved_addrs.push(deps.api.addr_validate(member.addr.as_str())?);
+    }
+
     let msg = dao_interface::msg::InstantiateMsg {
         admin: None,
         name,
@@ -83,7 +88,7 @@ pub fn execute_instantiate(
         return Err(ContractError::UnexpectedDoubleTx {});
     }
 
-    PENDING_MSIG.save(deps.storage, &(info.sender, env.block.height))?;
+    PENDING_MSIG.save(deps.storage, &(involved_addrs, env.block.height))?;
 
     // Temporarily set the contract's admin to be the smart contract to setup some information
     Ok(Response::default().add_submessage(SubMsg::reply_on_success(
