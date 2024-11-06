@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MSigCodeIds",
+  "type": "object",
+  "required": [
+    "cw4",
+    "main",
+    "pre_proposal",
+    "proposal",
+    "voting"
+  ],
+  "properties": {
+    "cw4": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "main": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "pre_proposal": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "proposal": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "voting": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    }
+  }
+}

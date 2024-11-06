@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PageResult",
+  "type": "object",
+  "required": [
+    "data"
+  ],
+  "properties": {
+    "data": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/MSig"
+      }
+    },
+    "next": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0.0
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "MSig": {
+      "type": "object",
+      "required": [
+        "cw4_contract",
+        "dao_dao_contract",
+        "pre_propose_contract",
+        "proposal_contract",
+        "voting_contract"
+      ],
+      "properties": {
+        "cw4_contract": {
+          "type": "string"
+        },
+        "dao_dao_contract": {
+          "description": "Multisig creator",
+          "type": "string"
+        },
+        "pre_propose_contract": {
+          "type": "string"
+        },
+        "proposal_contract": {
+          "type": "string"
+        },
+        "voting_contract": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

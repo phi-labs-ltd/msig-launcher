@@ -15,6 +15,7 @@ pub fn execute_instantiate(
     name: String,
     description: String,
     image_url: Option<String>,
+    min_voting_period: u64,
     max_voting_period: u64,
     members: Vec<cw4::Member>,
 ) -> Result<Response, ContractError> {
@@ -42,7 +43,6 @@ pub fn execute_instantiate(
             admin: Some(Address {
                 addr: env.contract.address.to_string(),
             }),
-            funds: vec![],
             label: format!("{}-voting-module", label),
         },
         proposal_modules_instantiate_info: vec![ModuleInstantiateInfo {
@@ -53,7 +53,7 @@ pub fn execute_instantiate(
                     quorum: PercentageThreshold::Majority {},
                 },
                 max_voting_period: Duration::Time(max_voting_period),
-                min_voting_period: None,
+                min_voting_period: Some(Duration::Time(min_voting_period)),
                 only_members_execute: true,
                 allow_revoting: false,
                 pre_propose_info: PreProposeInfo::ModuleMayPropose {
@@ -67,17 +67,14 @@ pub fn execute_instantiate(
                         admin: Some(Address {
                             addr: env.contract.address.to_string(),
                         }),
-                        funds: vec![],
                         label: format!("{}-pre-proposal-module", label),
                     },
                 },
-                close_proposal_on_execution_failure: false,
-                veto: None,
+                close_proposal_on_execution_failure: true,
             })?,
             admin: Some(Address {
                 addr: env.contract.address.to_string(),
             }),
-            funds: vec![],
             label: format!("{}-proposal-module", label),
         }],
         initial_items: None,
