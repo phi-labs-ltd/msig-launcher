@@ -2,14 +2,14 @@
   "deployments": [
     {
       "action": "instantiate",
-      "txhash": "5FBDAF3C3F6A7D76E867D9CEF0E1A2851D15650C57D0A9943A9A1CECAACDA2DF",
+      "txhash": "BDCC1BB9B38A2BE8225F877A11E849E30F17481AA6EC46CE7F26DBB527011231",
       "wasm": {
-        "codeId": 3884
+        "codeId": 4080
       },
       "contract": {
         "name": "msig-launcher",
         "version": "0.1.0",
-        "address": "archway1vcmrhn6wcwyskkz5gcmf0qexzmav23hydn3e3czcc64cxj3zp92q0k850a",
+        "address": "archway1tv8jh7hmm0pxfmqlp24c2zxfmwzc5pma4ec7nt8ezkux2qd0zkjqkjha7u",
         "admin": "archway1d4mz3n63m6gm608d2qctleersn2z2xumqjlj7z"
       },
       "msg": {
@@ -24,10 +24,10 @@
     },
     {
       "action": "store",
-      "txhash": "7771A867F4CF647CC77EA0BACEA5F080F3F12452CBC00C6167C410187B15EF94",
+      "txhash": "E8F9B9A1FE50E00EBC7D4B650088934A51B88D6FE2A001AA51F1BD4513ADF321",
       "wasm": {
-        "codeId": 3884,
-        "checksum": "a99767c142894b2571c3af3699cdfd3bd3cb00c1032391b15eb8d4a861c1ed88"
+        "codeId": 4080,
+        "checksum": "eb57624c58ac7b89c4c45304b02c651b9ef9cf3eb959d56e51332c849e762d69"
       },
       "contract": {
         "name": "msig-launcher",

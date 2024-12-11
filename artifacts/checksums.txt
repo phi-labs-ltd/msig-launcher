@@ -1,0 +1,1 @@
+eb57624c58ac7b89c4c45304b02c651b9ef9cf3eb959d56e51332c849e762d69  msig_launcher.wasm
