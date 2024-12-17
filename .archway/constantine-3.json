@@ -1,6 +1,18 @@
 {
   "deployments": [
     {
+      "action": "store",
+      "txhash": "7B4BA3C02D4A1CE28AA5C1AA621E7EABF881F8FD6BBAA2F45A11208E703F8106",
+      "wasm": {
+        "codeId": 4125,
+        "checksum": "f92ac4232b90cc4be0703e8bb7612ddbc41bf7f87cfacdf0dd280f37b1e3d8f5"
+      },
+      "contract": {
+        "name": "msig-launcher",
+        "version": "0.1.0"
+      }
+    },
+    {
       "action": "instantiate",
       "txhash": "BDCC1BB9B38A2BE8225F877A11E849E30F17481AA6EC46CE7F26DBB527011231",
       "wasm": {
