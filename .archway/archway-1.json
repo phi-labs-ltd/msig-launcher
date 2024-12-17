@@ -1,0 +1,38 @@
+{
+  "deployments": [
+    {
+      "action": "instantiate",
+      "txhash": "3F49F7FF330AAADAD2EB78859D5437931899DE1161A2A06498413B7D587CBBA6",
+      "wasm": {
+        "codeId": 782
+      },
+      "contract": {
+        "name": "msig-launcher",
+        "version": "0.1.0",
+        "address": "archway1ad93u609z2mmqc8g8rzfnhz0err6xkmcqhl24839a650yzrl0m6qska3l6",
+        "admin": "archway1xglnhxx4qp46vwgxlpdwjvscrp6ukzvr87q4nm"
+      },
+      "msg": {
+        "code_ids": {
+          "main": 7,
+          "voting": 5,
+          "proposal": 4,
+          "pre_proposal": 6,
+          "cw4": 3
+        }
+      }
+    },
+    {
+      "action": "store",
+      "txhash": "B0621512BF695AF1BF602F9C9FED57CFA7B9033B41D26835951304CEE40CD651",
+      "wasm": {
+        "codeId": 782,
+        "checksum": "eb57624c58ac7b89c4c45304b02c651b9ef9cf3eb959d56e51332c849e762d69"
+      },
+      "contract": {
+        "name": "msig-launcher",
+        "version": "0.1.0"
+      }
+    }
+  ]
+}
