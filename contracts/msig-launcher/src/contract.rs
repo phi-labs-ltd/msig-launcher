@@ -71,22 +71,21 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let mut results = vec![];
             let mut page = None;
 
-            // We add a +1 for the next page to get
             for (i, res) in MSIG
                 .range(
                     deps.storage,
                     Some(Bound::inclusive((pagination.user.clone(), start_at))),
-                    Some(Bound::inclusive((pagination.user, start_at + limit as u64))),
+                    Some(Bound::inclusive((pagination.user.clone(), u64::MAX))),
                     Order::Ascending,
                 )
-                // .take(limit + 1)
+                .take(limit + 1)
                 .enumerate()
             {
                 let ((_, height), result) = res?;
-
+                
                 // If we got the expected amount of items + 1
                 // then theres more to query the next time
-                if i == limit + 1 {
+                if i == limit {
                     page = Some(height);
                 } else {
                     results.push(result);
@@ -383,6 +382,23 @@ mod tests {
                 },
             )
             .unwrap();
+        dbg!(&res);
         assert_eq!(res.data.len(), 2);
+        assert!(res.next.is_none());
+
+        let res = wasm
+            .query::<_, PageResult>(
+                &launcher,
+                &QueryMsg::MSigs {
+                    pagination: Pagination {
+                        user: Addr::unchecked(user.address()),
+                        limit: Some(1),
+                        start_at: None,
+                    },
+                },
+            )
+            .unwrap();
+        assert_eq!(res.data.len(), 1);
+        assert!(res.next.is_some());
     }
 }
