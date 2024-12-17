@@ -82,7 +82,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 .enumerate()
             {
                 let ((_, height), result) = res?;
-                
+
                 // If we got the expected amount of items + 1
                 // then theres more to query the next time
                 if i == limit {
