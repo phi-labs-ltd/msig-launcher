@@ -3,13 +3,15 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult,
 };
+use cw2::{get_contract_version, set_contract_version};
 use cw_storage_plus::Bound;
 // use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::execute::execute_instantiate;
 use crate::msg::{
-    ExecuteMsg, InstantiateMsg, PageResult, QueryMsg, PAGINATION_DEFAULT, PAGINATION_LIMIT,
+    ExecuteMsg, InstantiateMsg, MigrateMsg, PageResult, QueryMsg, PAGINATION_DEFAULT,
+    PAGINATION_LIMIT,
 };
 use crate::state::{MSIG, MSIG_CODE_IDS};
 /*
@@ -56,6 +58,11 @@ pub fn execute(
             members,
         ),
     }
+}
+
+#[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
+pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    Ok(Response::default())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

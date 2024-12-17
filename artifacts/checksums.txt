@@ -1,1 +1,1 @@
-abe859d0055a8d3e9698f7a2d9ee61b96ecc50160c0c0c9965f564456ac4641f  msig_launcher.wasm
+f92ac4232b90cc4be0703e8bb7612ddbc41bf7f87cfacdf0dd280f37b1e3d8f5  msig_launcher.wasm
