@@ -3,13 +3,15 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult,
 };
+use cw2::{get_contract_version, set_contract_version};
 use cw_storage_plus::Bound;
 // use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::execute::execute_instantiate;
 use crate::msg::{
-    ExecuteMsg, InstantiateMsg, PageResult, QueryMsg, PAGINATION_DEFAULT, PAGINATION_LIMIT,
+    ExecuteMsg, InstantiateMsg, MigrateMsg, PageResult, QueryMsg, PAGINATION_DEFAULT,
+    PAGINATION_LIMIT,
 };
 use crate::state::{MSIG, MSIG_CODE_IDS};
 /*
@@ -58,6 +60,11 @@ pub fn execute(
     }
 }
 
+#[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
+pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    Ok(Response::default())
+}
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
@@ -66,19 +73,16 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 .limit
                 .unwrap_or(PAGINATION_DEFAULT)
                 .min(PAGINATION_LIMIT) as usize;
+            let start_at = pagination.start_at.unwrap_or(0);
 
             let mut results = vec![];
             let mut page = None;
 
-            // We add a +1 for the next page to get
             for (i, res) in MSIG
                 .range(
                     deps.storage,
-                    Some(Bound::inclusive((
-                        pagination.user,
-                        pagination.start_at.unwrap_or(0),
-                    ))),
-                    None,
+                    Some(Bound::inclusive((pagination.user.clone(), start_at))),
+                    Some(Bound::inclusive((pagination.user.clone(), u64::MAX))),
                     Order::Ascending,
                 )
                 .take(limit + 1)
@@ -244,5 +248,164 @@ mod tests {
 
             assert_eq!(msig, main);
         }
+    }
+
+    #[test]
+    fn query() {
+        let app = ArchwayApp::default();
+
+        let accounts = app.init_accounts(&[arch(100)], 2).unwrap();
+        let admin = accounts.get(0).unwrap();
+        let user = accounts.get(1).unwrap();
+
+        let wasm = Wasm::new(&app);
+        let dao_core_file = std::fs::read("../../external_wasm/dao_dao_core.wasm").unwrap();
+        let dao_core_id = wasm
+            .store_code(&dao_core_file, None, admin)
+            .unwrap()
+            .data
+            .code_id;
+        let voting_file = std::fs::read("../../external_wasm/cw4_voting.wasm").unwrap();
+        let voting_id = wasm
+            .store_code(&voting_file, None, admin)
+            .unwrap()
+            .data
+            .code_id;
+        let proposal_file = std::fs::read("../../external_wasm/dao_proposal_single.wasm").unwrap();
+        let proposal_id = wasm
+            .store_code(&proposal_file, None, admin)
+            .unwrap()
+            .data
+            .code_id;
+        let pre_propose_file =
+            std::fs::read("../../external_wasm/dao_pre_propose_single.wasm").unwrap();
+        let pre_propose_id = wasm
+            .store_code(&pre_propose_file, None, admin)
+            .unwrap()
+            .data
+            .code_id;
+        let cw4 = std::fs::read("../../external_wasm/cw4_group.wasm").unwrap();
+        let cw4_id = wasm.store_code(&cw4, None, admin).unwrap().data.code_id;
+
+        // Msig launcher
+        let launcher =
+            std::fs::read("../../target/wasm32-unknown-unknown/release/msig_launcher.wasm")
+                .unwrap();
+        let launcher_code_id = wasm
+            .store_code(&launcher, None, admin)
+            .unwrap()
+            .data
+            .code_id;
+
+        let launcher = wasm
+            .instantiate(
+                launcher_code_id,
+                &InstantiateMsg {
+                    code_ids: MSigCodeIds {
+                        main: dao_core_id,
+                        voting: voting_id,
+                        proposal: proposal_id,
+                        pre_proposal: pre_propose_id,
+                        cw4: cw4_id,
+                    },
+                },
+                None,
+                Some("label"),
+                &[],
+                admin,
+            )
+            .unwrap()
+            .data
+            .address;
+
+        let member_accounts = app.init_accounts(&[arch(100)], 3).unwrap();
+        let _res = wasm
+            .execute(
+                &launcher,
+                &ExecuteMsg::Instantiate {
+                    name: "SomeWallet".to_string(),
+                    description: "SomeDescription".to_string(),
+                    image_url: Some("Image".to_string()),
+                    max_voting_period: 100,
+                    min_voting_period: 0,
+                    members: vec![
+                        Member {
+                            addr: member_accounts.get(0).unwrap().address(),
+                            weight: 1,
+                        },
+                        Member {
+                            addr: member_accounts.get(1).unwrap().address(),
+                            weight: 1,
+                        },
+                        Member {
+                            addr: member_accounts.get(2).unwrap().address(),
+                            weight: 1,
+                        },
+                    ],
+                },
+                &[],
+                user,
+            )
+            .unwrap();
+        let _res = wasm
+            .execute(
+                &launcher,
+                &ExecuteMsg::Instantiate {
+                    name: "SomeOtherWallet".to_string(),
+                    description: "SomeDescription".to_string(),
+                    image_url: Some("Image".to_string()),
+                    max_voting_period: 100,
+                    min_voting_period: 0,
+                    members: vec![
+                        Member {
+                            addr: member_accounts.get(0).unwrap().address(),
+                            weight: 1,
+                        },
+                        Member {
+                            addr: member_accounts.get(1).unwrap().address(),
+                            weight: 1,
+                        },
+                        Member {
+                            addr: member_accounts.get(2).unwrap().address(),
+                            weight: 1,
+                        },
+                    ],
+                },
+                &[],
+                user,
+            )
+            .unwrap();
+
+        // Queried
+        let res = wasm
+            .query::<_, PageResult>(
+                &launcher,
+                &QueryMsg::MSigs {
+                    pagination: Pagination {
+                        user: Addr::unchecked(user.address()),
+                        limit: None,
+                        start_at: None,
+                    },
+                },
+            )
+            .unwrap();
+        dbg!(&res);
+        assert_eq!(res.data.len(), 2);
+        assert!(res.next.is_none());
+
+        let res = wasm
+            .query::<_, PageResult>(
+                &launcher,
+                &QueryMsg::MSigs {
+                    pagination: Pagination {
+                        user: Addr::unchecked(user.address()),
+                        limit: Some(1),
+                        start_at: None,
+                    },
+                },
+            )
+            .unwrap();
+        assert_eq!(res.data.len(), 1);
+        assert!(res.next.is_some());
     }
 }
